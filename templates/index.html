@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TikTok Saved Videos Organizer</title>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #1a1a1f;
+    --surface2: #22222a;
+    --border: #2e2e38;
+    --accent: #fe2c55;
+    --accent2: #25f4ee;
+    --text: #f0f0f0;
+    --muted: #888;
+    --radius: 10px;
+    --sidebar-w: 260px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow: hidden;
+  }
+  #sidebar-header {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #sidebar-header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: .5px;
+  }
+  #sidebar-header p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  #sidebar-header .header-row { display: flex; align-items: center; justify-content: space-between; }
+  #sort-toggle {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  #sort-toggle:hover { color: var(--accent2); border-color: var(--accent2); }
+  #sort-toggle.az { color: var(--accent2); border-color: var(--accent2); }
+  #sidebar-search {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #sidebar-search input {
+    width: 100%;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+  }
+  #cat-list { overflow-y: auto; flex: 1; padding: 6px 0; }
+  .cat-item {
+    display: flex;
+    align-items: center;
+    padding: 7px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    margin: 1px 6px;
+    font-size: 13px;
+    gap: 8px;
+    transition: background .15s;
+    user-select: none;
+  }
+  .cat-item:hover { background: var(--surface2); }
+  .cat-item.active { background: rgba(254,44,85,.15); color: var(--accent); }
+  .cat-item .cat-icon { font-size: 14px; flex-shrink: 0; }
+  .cat-item .cat-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cat-item .badge {
+    background: var(--surface2);
+    color: var(--muted);
+    border-radius: 20px;
+    font-size: 10px;
+    padding: 1px 7px;
+    min-width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .cat-item.active .badge { background: rgba(254,44,85,.25); color: var(--accent); }
+  .subfolder-list { display: none; padding-left: 8px; }
+  .subfolder-list.open { display: block; }
+  .sub-item {
+    display: flex; align-items: center; padding: 5px 16px; cursor: pointer;
+    border-radius: 6px; margin: 1px 6px; font-size: 12px; gap: 8px;
+    color: var(--muted); transition: background .15s;
+  }
+  .sub-item:hover { background: var(--surface2); color: var(--text); }
+  .sub-item.active { color: var(--accent2); background: rgba(37,244,238,.08); }
+  .sub-item .badge { background: var(--surface2); color: var(--muted); border-radius: 20px; font-size: 10px; padding: 1px 7px; min-width: 22px; text-align: center; }
+
+  /* ── Main ── */
+  #main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ── Top bar ── */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  #add-url-wrap {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 280px;
+  }
+  #add-url-input {
+    flex: 1;
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    transition: border-color .2s;
+  }
+  #add-url-input:focus { outline: none; border-color: var(--accent); }
+  #add-url-input::placeholder { color: var(--muted); }
+  #add-btn {
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity .2s;
+    white-space: nowrap;
+  }
+  #add-btn:hover { opacity: .85; }
+  #add-btn:disabled { opacity: .4; cursor: default; }
+
+  #search-wrap { display: flex; gap: 8px; align-items: center; }
+  #global-search {
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    width: 220px;
+    transition: border-color .2s;
+  }
+  #global-search:focus { outline: none; border-color: var(--accent2); }
+  #import-btn {
+    padding: 9px 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .2s, background .2s;
+  }
+  #import-btn:hover { border-color: var(--accent2); background: rgba(37,244,238,.06); }
+
+  /* ── Content area ── */
+  #content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+  }
+  #content-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #content-header h2 { font-size: 18px; font-weight: 700; }
+  #content-header .meta { font-size: 12px; color: var(--muted); }
+  #bulk-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: rgba(254,44,85,.1);
+    border: 1px solid rgba(254,44,85,.3);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  #bulk-bar.show { display: flex; }
+  #bulk-bar select {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 12px;
+  }
+  #bulk-bar button {
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #bulk-bar .cancel-bulk { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+
+  /* ── Grid ── */
+  #video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+  }
+  .video-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: border-color .2s, box-shadow .2s;
+    position: relative;
+  }
+  .video-card:hover { border-color: #444; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+  .video-card.selected { border-color: var(--accent); background: rgba(254,44,85,.06); }
+  .card-select {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .card-url a {
+    color: var(--accent2);
+    font-size: 12px;
+    text-decoration: none;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-url a:hover { text-decoration: underline; }
+  .card-caption {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-caption.empty { color: var(--muted); font-style: italic; }
+  .card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .card-creator { font-weight: 600; color: #aaa; }
+  .card-date { color: var(--muted); }
+  .cat-badge {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(254,44,85,.15);
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .cat-badge.unsorted { background: rgba(136,136,136,.15); color: var(--muted); }
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .move-select {
+    flex: 1;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .del-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+    flex-shrink: 0;
+  }
+  .del-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── Pagination ── */
+  #pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+  .page-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .page-btn:hover { background: var(--surface2); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .page-btn:disabled { opacity: .35; cursor: default; }
+
+  /* ── Empty state ── */
+  #empty-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--muted);
+    gap: 12px;
+  }
+  #empty-state .icon { font-size: 48px; }
+  #empty-state h3 { font-size: 16px; color: var(--text); }
+  #empty-state p { font-size: 13px; max-width: 380px; line-height: 1.6; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+    z-index: 999;
+    max-width: 320px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.success { border-color: #25f4ee; }
+  #toast.error { border-color: var(--accent); }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 20px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    max-width: 540px;
+    width: 100%;
+  }
+  .modal h2 { font-size: 18px; margin-bottom: 16px; }
+  .modal p { font-size: 13px; line-height: 1.7; color: #ccc; margin-bottom: 14px; }
+  .modal .steps {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--text);
+    margin-bottom: 18px;
+  }
+  .modal .steps strong { color: var(--accent2); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions button {
+    padding: 9px 20px; border-radius: 8px; border: none; font-size: 13px; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border) !important; }
+  .file-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: border-color .2s, background .2s;
+  }
+  .file-upload-area:hover, .file-upload-area.drag-over { border-color: var(--accent2); background: rgba(37,244,238,.05); }
+  .file-upload-area p { font-size: 13px; color: var(--muted); margin: 0; }
+  .file-upload-area .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  #file-name { font-size: 12px; color: var(--accent2); margin-top: 8px; display: none; }
+  #import-progress { font-size: 13px; color: var(--muted); text-align: center; margin-top: 10px; display: none; }
+
+  /* ── Loading spinner ── */
+  #loading {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    color: var(--muted);
+    font-size: 13px;
+    gap: 10px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+  /* ── Responsive tweak ── */
+  @media (max-width: 640px) {
+    #sidebar { display: none; }
+    #video-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div id="sidebar-header">
+    <div class="header-row">
+      <h1>🎵 TikTok Organizer</h1>
+      <button id="sort-toggle" onclick="toggleSortOrder()" title="Toggle sort order">A-Z</button>
+    </div>
+    <p id="total-count">Loading...</p>
+  </div>
+  <div id="sidebar-search">
+    <input type="text" id="sidebar-filter" placeholder="Filter folders…" oninput="filterSidebar(this.value)" />
+  </div>
+  <div id="cat-list"></div>
+</nav>
+
+<!-- Main -->
+<div id="main">
+  <!-- Top bar -->
+  <div id="topbar">
+    <div id="add-url-wrap">
+      <input type="text" id="add-url-input" placeholder="Paste a TikTok URL to add it instantly…" onkeydown="if(event.key==='Enter') addVideo()" />
+      <button id="add-btn" onclick="addVideo()">+ Add</button>
+    </div>
+    <div id="search-wrap">
+      <input type="text" id="global-search" placeholder="🔍 Search videos…" oninput="debounceSearch(this.value)" />
+      <button id="import-btn" onclick="openImportModal()">📥 Import JSON</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+    <div id="content-header">
+      <div>
+        <h2 id="current-cat-title">Unsorted</h2>
+        <div class="meta" id="content-meta"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label style="font-size:12px;color:var(--muted);cursor:pointer;">
+          <input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this.checked)" style="accent-color:var(--accent);margin-right:4px;">
+          Select all
+        </label>
+      </div>
+    </div>
+
+    <!-- Bulk action bar -->
+    <div id="bulk-bar">
+      <span id="bulk-count">0 selected</span>
+      <span style="color:var(--muted)">→ Move to:</span>
+      <select id="bulk-cat-select" onchange="updateBulkSubfolderSelect()"></select>
+      <select id="bulk-sub-select" style="display:none"></select>
+      <button onclick="moveBulk()">Move</button>
+      <button class="cancel-bulk" onclick="clearSelection()">Cancel</button>
+    </div>
+
+    <div id="loading"><div class="spinner"></div> Loading videos…</div>
+    <div id="empty-state">
+      <div class="icon">📭</div>
+      <h3>No videos here yet</h3>
+      <p>Import your TikTok data export or paste a URL above to add your first video.</p>
+    </div>
+    <div id="video-grid"></div>
+    <div id="pagination"></div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay hidden" id="import-modal">
+  <div class="modal">
+    <h2>📥 Import TikTok Data</h2>
+    <p>Upload your TikTok JSON data export to import all your saved videos at once.</p>
+    <div class="steps">
+      <strong>How to get your TikTok data:</strong><br>
+      1. Open TikTok → tap <strong>Profile</strong><br>
+      2. Tap <strong>⋮ Menu</strong> → <strong>Settings and Privacy</strong><br>
+      3. Go to <strong>Privacy</strong> → <strong>Download Your Data</strong><br>
+      4. Select <strong>JSON</strong> format and request your data<br>
+      5. TikTok will email you a download link within <strong>24–48 hours</strong>
+    </div>
+    <div class="file-upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault();this.classList.add('drag-over')"
+         ondragleave="this.classList.remove('drag-over')"
+         ondrop="handleDrop(event)">
+      <div class="upload-icon">📂</div>
+      <p>Click to browse or drag &amp; drop your <strong>user_data.json</strong> file here</p>
+      <div id="file-name"></div>
+    </div>
+    <input type="file" id="file-input" accept=".json" style="display:none" onchange="handleFileSelect(this)" />
+    <div id="import-progress"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeImportModal()">Cancel</button>
+      <button class="btn-primary" id="do-import-btn" onclick="doImport()" disabled>Import Videos</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ──
+const CATEGORIES = {{ categories | tojson }};
+const SUBFOLDERS = {{ subfolders | tojson }};
+
+const CAT_ICONS = {
+  'Unsorted': '📥', 'Credit Repair': '💳', 'Fashion': '👗', 'Skincare': '✨',
+  'Makeup': '💄', 'Funny': '😂', 'Conspiracy': '🕵️', 'Recipe/Food': '🍳',
+  'Places To Go': '📍', 'International Travel': '✈️', 'Financial Advice': '💰',
+  'Money Saving Hacks': '🐷', 'Life Advice': '🧠', 'Bible/Jesus/God': '✝️',
+  'Relationship Advice': '💞', 'Marketing & AI': '🤖', 'Business': '💼',
+  'Gym/Fitness/Health': '💪', 'Life Hacks': '⚡', 'Music': '🎵', 'Hair': '💇',
+  'Home': '🏠', 'DIY Art': '🎨', 'Wishlist': '⭐', 'Perfumes': '🌸',
+  'Car Accessories/Car Hacks': '🔧', 'Cars': '🚗', 'Tutorials': '📚',
+  'Birthday': '🎂', 'Rhinoplasty': '👃', 'Science': '🔬', 'iPhone Hacks': '📱',
+  'Books': '📖', 'Politics': '🗳️', 'Magic Tricks': '🪄',
+};
+
+let state = {
+  category: 'Unsorted',
+  subfolder: '',
+  page: 1,
+  total: 0,
+  searchMode: false,
+  searchQuery: '',
+  counts: {},
+  selectedIds: new Set(),
+};
+
+let searchTimer = null;
+let selectedFile = null;
+
+// ── Init ──
+async function init() {
+  buildSidebar();
+  await refreshCounts();
+  loadVideos();
+}
+
+// ── Sort order ──
+let sortAZ = localStorage.getItem('sidebarSortAZ') === 'true';
+
+function toggleSortOrder() {
+  sortAZ = !sortAZ;
+  localStorage.setItem('sidebarSortAZ', sortAZ);
+  applySortToggleUI();
+  buildSidebar();
+  updateSidebarActive();
+}
+
+function applySortToggleUI() {
+  const btn = document.getElementById('sort-toggle');
+  if (sortAZ) {
+    btn.textContent = 'Custom';
+    btn.classList.add('az');
+    btn.title = 'Switch to custom order';
+  } else {
+    btn.textContent = 'A-Z';
+    btn.classList.remove('az');
+    btn.title = 'Sort alphabetically';
+  }
+}
+
+function getSortedCategories() {
+  if (!sortAZ) return CATEGORIES;
+  // Keep Unsorted pinned at top, sort the rest A-Z
+  const rest = CATEGORIES.filter(c => c !== 'Unsorted').slice().sort((a, b) => a.localeCompare(b));
+  return ['Unsorted', ...rest];
+}
+
+// ── Sidebar ──
+function buildSidebar() {
+  applySortToggleUI();
+  const list = document.getElementById('cat-list');
+  list.innerHTML = '';
+  getSortedCategories().forEach(cat => {
+    const item = document.createElement('div');
+    item.className = 'cat-item' + (cat === state.category && !state.searchMode ? ' active' : '');
+    item.dataset.cat = cat;
+    const icon = CAT_ICONS[cat] || '📁';
+    const hasSubs = SUBFOLDERS[cat];
+    item.innerHTML = `
+      <span class="cat-icon">${icon}</span>
+      <span class="cat-name">${cat}</span>
+      ${hasSubs ? '<span style="color:var(--muted);font-size:10px;">▾</span>' : ''}
+      <span class="badge" id="badge-${encodeId(cat)}">—</span>
+    `;
+    item.onclick = () => selectCategory(cat);
+    list.appendChild(item);
+    if (hasSubs) {
+      const subList = document.createElement('div');
+      subList.className = 'subfolder-list';
+      subList.id = 'subs-' + encodeId(cat);
+      SUBFOLDERS[cat].forEach(sub => {
+        const si = document.createElement('div');
+        si.className = 'sub-item';
+        si.dataset.cat = cat;
+        si.dataset.sub = sub;
+        si.innerHTML = `<span>└ ${sub}</span><span class="badge" id="badge-${encodeId(cat+'-'+sub)}">—</span>`;
+        si.onclick = (e) => { e.stopPropagation(); selectSubfolder(cat, sub); };
+        subList.appendChild(si);
+      });
+      list.appendChild(subList);
+    }
+  });
+}
+
+function encodeId(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function filterSidebar(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.cat-item').forEach(el => {
+    const name = el.dataset.cat.toLowerCase();
+    el.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+
+function updateSidebarActive() {
+  document.querySelectorAll('.cat-item').forEach(el => {
+    el.classList.toggle('active', !state.searchMode && el.dataset.cat === state.category && !state.subfolder);
+  });
+  document.querySelectorAll('.sub-item').forEach(el => {
+    el.classList.toggle('active', !state.searchMode && el.dataset.cat === state.category && el.dataset.sub === state.subfolder);
+  });
+}
+
+async function refreshCounts() {
+  const res = await fetch('/api/counts');
+  state.counts = await res.json();
+  let total = 0;
+  CATEGORIES.forEach(cat => {
+    const cnt = state.counts[cat]?.total || 0;
+    total += cnt;
+    const badge = document.getElementById('badge-' + encodeId(cat));
+    if (badge) badge.textContent = cnt || '0';
+    // subfolders
+    if (SUBFOLDERS[cat]) {
+      SUBFOLDERS[cat].forEach(sub => {
+        const scnt = state.counts[cat]?.subfolders?.[sub] || 0;
+        const sb = document.getElementById('badge-' + encodeId(cat+'-'+sub));
+        if (sb) sb.textContent = scnt || '0';
+      });
+    }
+  });
+  document.getElementById('total-count').textContent = `${total.toLocaleString()} videos total`;
+}
+
+function selectCategory(cat) {
+  state.category = cat;
+  state.subfolder = '';
+  state.page = 1;
+  state.searchMode = false;
+  state.searchQuery = '';
+  document.getElementById('global-search').value = '';
+
+  // toggle subfolder list
+  const subList = document.getElementById('subs-' + encodeId(cat));
+  if (subList) subList.classList.toggle('open');
+
+  updateSidebarActive();
+  loadVideos();
+}
+
+function selectSubfolder(cat, sub) {
+  state.category = cat;
+  state.subfolder = sub;
+  state.page = 1;
+  state.searchMode = false;
+  state.searchQuery = '';
+  document.getElementById('global-search').value = '';
+  updateSidebarActive();
+  loadVideos();
+}
+
+// ── Videos ──
+async function loadVideos() {
+  clearSelection();
+  showLoading(true);
+
+  let url;
+  if (state.searchMode && state.searchQuery) {
+    url = `/api/search?q=${encodeURIComponent(state.searchQuery)}&page=${state.page}`;
+  } else {
+    url = `/api/videos?category=${encodeURIComponent(state.category)}&subfolder=${encodeURIComponent(state.subfolder)}&page=${state.page}`;
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+  state.total = data.total;
+
+  showLoading(false);
+  renderVideos(data.videos, data.total, data.page, data.per_page);
+
+  const title = state.searchMode
+    ? `Search: "${state.searchQuery}"`
+    : (state.subfolder ? `${state.category} › ${state.subfolder}` : state.category);
+  document.getElementById('current-cat-title').textContent = title;
+  document.getElementById('content-meta').textContent = `${data.total.toLocaleString()} video${data.total !== 1 ? 's' : ''}`;
+}
+
+function showLoading(show) {
+  document.getElementById('loading').style.display = show ? 'flex' : 'none';
+  document.getElementById('video-grid').style.display = show ? 'none' : 'grid';
+}
+
+function renderVideos(videos, total, page, perPage) {
+  const grid = document.getElementById('video-grid');
+  const empty = document.getElementById('empty-state');
+  grid.innerHTML = '';
+
+  if (!videos.length) {
+    empty.style.display = 'flex';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  videos.forEach(v => {
+    const card = buildCard(v);
+    grid.appendChild(card);
+  });
+
+  renderPagination(total, page, perPage);
+}
+
+function buildCard(v) {
+  const card = document.createElement('div');
+  card.className = 'video-card';
+  card.dataset.id = v.id;
+
+  const isUnsorted = v.category === 'Unsorted';
+  const badge = isUnsorted
+    ? `<span class="cat-badge unsorted">Unsorted</span>`
+    : `<span class="cat-badge">${v.subfolder ? v.category + ' › ' + v.subfolder : v.category}</span>`;
+
+  const caption = v.caption
+    ? `<div class="card-caption">${escHtml(v.caption)}</div>`
+    : `<div class="card-caption empty">No caption</div>`;
+
+  const creator = v.creator ? `<span class="card-creator">@${escHtml(v.creator)}</span>` : '';
+  const dateSaved = v.date_saved ? `<span class="card-date">${v.date_saved}</span>` : '';
+
+  // Move dropdown
+  let moveOptions = '<option value="">Move to…</option>';
+  CATEGORIES.forEach(cat => {
+    if (cat === v.category && !v.subfolder) return;
+    moveOptions += `<option value="${escHtml(cat)}||">${escHtml(cat)}</option>`;
+    if (SUBFOLDERS[cat]) {
+      SUBFOLDERS[cat].forEach(sub => {
+        if (cat === v.category && sub === v.subfolder) return;
+        moveOptions += `<option value="${escHtml(cat)}||${escHtml(sub)}">  └ ${escHtml(sub)}</option>`;
+      });
+    }
+  });
+
+  card.innerHTML = `
+    <input type="checkbox" class="card-select" data-id="${v.id}" onchange="toggleSelect(${v.id}, this.checked)" />
+    <div class="card-url"><a href="${escHtml(v.url)}" target="_blank" rel="noopener">${escHtml(v.url)}</a></div>
+    ${caption}
+    <div class="card-meta">
+      ${creator}
+      ${dateSaved}
+      ${badge}
+    </div>
+    <div class="card-actions">
+      <select class="move-select" onchange="moveVideo(${v.id}, this)">
+        ${moveOptions}
+      </select>
+      <button class="del-btn" onclick="deleteVideo(${v.id})">🗑</button>
+    </div>
+  `;
+  return card;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderPagination(total, page, perPage) {
+  const pages = Math.ceil(total / perPage);
+  const pg = document.getElementById('pagination');
+  pg.innerHTML = '';
+  if (pages <= 1) return;
+
+  const makeBtn = (label, p, disabled=false) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (p === page ? ' active' : '');
+    b.textContent = label;
+    b.disabled = disabled || p === page;
+    b.onclick = () => { state.page = p; loadVideos(); window.scrollTo(0,0); };
+    return b;
+  };
+
+  pg.appendChild(makeBtn('← Prev', page - 1, page === 1));
+
+  // show window of pages
+  let start = Math.max(1, page - 3);
+  let end = Math.min(pages, page + 3);
+  if (start > 1) { pg.appendChild(makeBtn('1', 1)); if (start > 2) pg.appendChild(Object.assign(document.createElement('span'), {textContent:'…', style:'color:var(--muted);padding:0 4px'})); }
+  for (let i = start; i <= end; i++) pg.appendChild(makeBtn(i, i));
+  if (end < pages) { if (end < pages - 1) pg.appendChild(Object.assign(document.createElement('span'), {textContent:'…', style:'color:var(--muted);padding:0 4px'})); pg.appendChild(makeBtn(pages, pages)); }
+
+  pg.appendChild(makeBtn('Next →', page + 1, page === pages));
+}
+
+// ── Move single video ──
+async function moveVideo(id, select) {
+  const val = select.value;
+  if (!val) return;
+  const [category, subfolder] = val.split('||');
+  const res = await fetch('/api/videos/move', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({id, category, subfolder: subfolder || ''})
+  });
+  if (res.ok) {
+    toast(`Moved to ${subfolder || category}`, 'success');
+    await refreshCounts();
+    loadVideos();
+  }
+}
+
+// ── Delete ──
+async function deleteVideo(id) {
+  if (!confirm('Remove this video?')) return;
+  await fetch(`/api/videos/${id}`, {method:'DELETE'});
+  toast('Video removed', 'success');
+  await refreshCounts();
+  loadVideos();
+}
+
+// ── Add video ──
+async function addVideo() {
+  const input = document.getElementById('add-url-input');
+  const url = input.value.trim();
+  if (!url) { toast('Please paste a TikTok URL', 'error'); return; }
+
+  const btn = document.getElementById('add-btn');
+  btn.disabled = true;
+  btn.textContent = 'Adding…';
+
+  const today = new Date().toISOString().split('T')[0];
+  const res = await fetch('/api/videos/add', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({url, date_saved: today})
+  });
+  const data = await res.json();
+
+  btn.disabled = false;
+  btn.textContent = '+ Add';
+
+  if (res.status === 409) {
+    toast('This video is already saved', 'error');
+    return;
+  }
+  if (!res.ok) {
+    toast(data.error || 'Error adding video', 'error');
+    return;
+  }
+
+  input.value = '';
+  toast('Video added to Unsorted!', 'success');
+  await refreshCounts();
+  if (state.category === 'Unsorted' && !state.searchMode) {
+    state.page = 1;
+    loadVideos();
+  }
+}
+
+// ── Search ──
+function debounceSearch(q) {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    if (q.trim()) {
+      state.searchMode = true;
+      state.searchQuery = q.trim();
+      state.page = 1;
+      updateSidebarActive();
+      loadVideos();
+    } else {
+      state.searchMode = false;
+      state.searchQuery = '';
+      updateSidebarActive();
+      loadVideos();
+    }
+  }, 350);
+}
+
+// ── Selection ──
+function toggleSelect(id, checked) {
+  if (checked) state.selectedIds.add(id);
+  else state.selectedIds.delete(id);
+  updateBulkBar();
+  const card = document.querySelector(`.video-card[data-id="${id}"]`);
+  if (card) card.classList.toggle('selected', checked);
+}
+
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.card-select').forEach(cb => {
+    const id = parseInt(cb.dataset.id);
+    cb.checked = checked;
+    if (checked) state.selectedIds.add(id);
+    else state.selectedIds.delete(id);
+    const card = document.querySelector(`.video-card[data-id="${id}"]`);
+    if (card) card.classList.toggle('selected', checked);
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  state.selectedIds.clear();
+  document.querySelectorAll('.card-select').forEach(cb => cb.checked = false);
+  document.querySelectorAll('.video-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('select-all-cb').checked = false;
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  const n = state.selectedIds.size;
+  bar.classList.toggle('show', n > 0);
+  document.getElementById('bulk-count').textContent = `${n} selected`;
+
+  // populate category select if empty
+  const sel = document.getElementById('bulk-cat-select');
+  if (!sel.options.length) {
+    CATEGORIES.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function updateBulkSubfolderSelect() {
+  const cat = document.getElementById('bulk-cat-select').value;
+  const subSel = document.getElementById('bulk-sub-select');
+  subSel.innerHTML = '';
+  if (SUBFOLDERS[cat]) {
+    subSel.style.display = '';
+    const none = document.createElement('option');
+    none.value = '';
+    none.textContent = '— No subfolder —';
+    subSel.appendChild(none);
+    SUBFOLDERS[cat].forEach(sub => {
+      const opt = document.createElement('option');
+      opt.value = sub;
+      opt.textContent = sub;
+      subSel.appendChild(opt);
+    });
+  } else {
+    subSel.style.display = 'none';
+  }
+}
+
+async function moveBulk() {
+  const ids = [...state.selectedIds];
+  if (!ids.length) return;
+  const category = document.getElementById('bulk-cat-select').value;
+  const subfolder = document.getElementById('bulk-sub-select').value || '';
+  const res = await fetch('/api/videos/move_bulk', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids, category, subfolder})
+  });
+  const data = await res.json();
+  if (res.ok) {
+    toast(`Moved ${data.moved} videos to ${subfolder || category}`, 'success');
+    clearSelection();
+    await refreshCounts();
+    loadVideos();
+  }
+}
+
+// ── Import Modal ──
+function openImportModal() {
+  document.getElementById('import-modal').classList.remove('hidden');
+}
+function closeImportModal() {
+  document.getElementById('import-modal').classList.add('hidden');
+  selectedFile = null;
+  document.getElementById('file-name').style.display = 'none';
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('do-import-btn').disabled = true;
+  document.getElementById('import-progress').style.display = 'none';
+  document.getElementById('file-input').value = '';
+}
+
+function handleFileSelect(input) {
+  if (!input.files.length) return;
+  selectedFile = input.files[0];
+  document.getElementById('file-name').textContent = '✓ ' + selectedFile.name;
+  document.getElementById('file-name').style.display = 'block';
+  document.getElementById('do-import-btn').disabled = false;
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  selectedFile = file;
+  document.getElementById('file-name').textContent = '✓ ' + file.name;
+  document.getElementById('file-name').style.display = 'block';
+  document.getElementById('do-import-btn').disabled = false;
+}
+
+async function doImport() {
+  if (!selectedFile) return;
+  const prog = document.getElementById('import-progress');
+  const btn = document.getElementById('do-import-btn');
+  prog.style.display = 'block';
+  prog.textContent = 'Uploading and parsing…';
+  btn.disabled = true;
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  try {
+    const res = await fetch('/api/import', {method: 'POST', body: fd});
+    const data = await res.json();
+    if (!res.ok) {
+      prog.textContent = '❌ ' + (data.error || 'Import failed');
+      btn.disabled = false;
+      return;
+    }
+    prog.textContent = `✅ Imported ${data.imported.toLocaleString()} videos (${data.skipped} duplicates skipped)`;
+    await refreshCounts();
+    state.category = 'Unsorted';
+    state.page = 1;
+    state.searchMode = false;
+    updateSidebarActive();
+    loadVideos();
+    setTimeout(closeImportModal, 2000);
+  } catch(e) {
+    prog.textContent = '❌ Network error. Try again.';
+    btn.disabled = false;
+  }
+}
+
+// ── Toast ──
+let toastTimer;
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// ── Keep-alive ping (prevents Render free tier from sleeping) ──
+setInterval(() => fetch('/ping').catch(() => {}), 4 * 60 * 1000);
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>

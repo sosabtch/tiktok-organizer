@@ -1,0 +1,10 @@
+*.db
+*.db-shm
+*.db-wal
+__pycache__/
+*.pyc
+.env
+*.mp4
+*.mov
+*.avi
+.DS_Store
