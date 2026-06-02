@@ -6,7 +6,7 @@ import re
 from datetime import datetime, date
 
 app = Flask(__name__)
-# On Render, use /data for persistent storage if available, else local directory
+# Use /tmp on Render free tier (no persistent disk), or local directory
 _data_dir = os.environ.get("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(_data_dir, "tiktok_organizer.db")
 
